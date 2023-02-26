@@ -21,6 +21,16 @@ public class Main {
 
     static Scanner SCANNER = new Scanner(System.in);
 
+    /**
+     * Возвращает путь к папке, куда можно скачивать файлы.
+     * Сначала пытается получить доступ к системной папке "Загрузки".
+     * Если это не удается, то создает рядом с исполняемым файлом папку Downloads.
+     * Если это не удается, то прибавляет к названию Downloads цифры,
+     * пока не получится создать папку с таким названием.
+     *
+     * @return Путь к папке, куда можно скачивать файлы.
+     * @throws IOException Если не получится создать папку.
+     */
     static String getDownloadsPath() throws IOException {
         final String downloadsName = "Downloads";
         File downloadsFile = new File(System.getProperty("user.home"), downloadsName);
