@@ -1,5 +1,6 @@
-import java.io.File;
-import java.io.IOException;
+package first_version;
+
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -9,29 +10,28 @@ import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Loader {
+public class Loader implements Closeable {
+    private static final int BYTE_COUNT_PER_TIME = 500;
+
     private String path;
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public Loader(String path) {
         Path pathObject = Path.of(path);
         if (Files.exists(pathObject) && Files.isDirectory(pathObject)) {
             this.path = path;
         } else {
-            throw new IllegalArgumentException(
-                    "Аргумент path должен указывать на существующую на компьютере папку");
+            throw new IllegalArgumentException("Аргумент path должен указывать на существующую на компьютере папку");
         }
     }
 
-    public Loader() throws IOException {
-        this.path = getDownloadsPath();
-    }
-
-    public void load(String[] urls) {
+    public void load(String[] urls) throws MalformedURLException {
         for (var url : urls) {
-            executorService.submit(() -> load(url));
+            URL urlObject = new URL(url);
+            executorService.submit(() -> load(urlObject));
         }
+        System.out.println("DEBUG");
     }
 
     public void changePath(String newPath) {
@@ -39,8 +39,7 @@ public class Loader {
         if (Files.exists(pathObject) && Files.isDirectory(pathObject)) {
             this.path = newPath;
         } else {
-            throw new IllegalArgumentException(
-                    "Аргумент path должен указывать на существующую на компьютере папку");
+            throw new IllegalArgumentException("Аргумент path должен указывать на существующую на компьютере папку");
         }
     }
 
@@ -48,15 +47,23 @@ public class Loader {
         return path;
     }
 
-    private void load(String url) {
+    private void load(URL urlObject) {
         try {
-            URL urlObject = new URL(url);
             String fileName = generateNewFileName(urlObject);
-            Files.copy(
-                    urlObject.openStream(),
-                    new File(path, fileName).toPath());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            Path filePath = new File(path, fileName).toPath();
+            Files.createFile(filePath);
+            try (OutputStream outputStream = new FileOutputStream(filePath.toString());
+                 InputStream inputStream = urlObject.openStream()) {
+                while (inputStream.available() >= BYTE_COUNT_PER_TIME) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        Files.delete(filePath);
+                        return;
+                    }
+                    outputStream.write(inputStream.readNBytes(BYTE_COUNT_PER_TIME));
+                }
+                outputStream.write(inputStream.readAllBytes());
+            }
+        } catch (IOException ignored) {
         }
     }
 
@@ -82,21 +89,9 @@ public class Loader {
         return fileName + (i == 0 ? "" : i) + fileExtension;
     }
 
-    private String getDownloadsPath() throws IOException {
-        final String downloadsName = "Downloads";
-        if (new File(System.getProperty("user.home"), downloadsName).exists()) {
-            return new File(System.getProperty("user.home"), downloadsName).getPath();
-        }
-        int i = 1;
-        Path path = Path.of(downloadsName);
-        while (Files.exists(path) &&
-                Files.isRegularFile(path)) {
-            path = Path.of(downloadsName + i);
-            ++i;
-        }
-        if (!Files.exists(path)) {
-            Files.createDirectory(path);
-        }
-        return new File(System.getProperty("user.dir"), path.toString()).getPath();
+    @Override
+    public void close() {
+        executorService.shutdownNow();
+        executorService.close();
     }
 }

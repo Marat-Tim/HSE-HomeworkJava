@@ -1,4 +1,10 @@
+package first_version;
+
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Scanner;
 
@@ -15,6 +21,28 @@ public class Main {
 
     static Scanner SCANNER = new Scanner(System.in);
 
+    static String getDownloadsPath() throws IOException {
+        final String downloadsName = "Downloads";
+        File downloadsFile = new File(System.getProperty("user.home"), downloadsName);
+        if (downloadsFile.exists()) {
+            return downloadsFile.getPath();
+        }
+        int i = 1;
+        Path path = Path.of(downloadsName);
+        while (Files.exists(path) && Files.isRegularFile(path)) {
+            path = Path.of(downloadsName + i);
+            ++i;
+        }
+        if (!Files.exists(path)) {
+            Files.createDirectory(path);
+        }
+        downloadsFile = new File(System.getProperty("user.dir"), path.toString());
+        if (downloadsFile.exists()) {
+            return downloadsFile.getPath();
+        }
+        return path.toString();
+    }
+
     static Command getCommand() {
         System.out.print("> ");
         String[] splitInput = SCANNER.nextLine().split(" ");
@@ -30,8 +58,12 @@ public class Main {
         if (args.length == 0) {
             System.out.println("Нужно указать путь до файла, который нужно скачать");
         } else {
-            loader.load(args);
-            System.out.println("Попытка скачать файл началась");
+            try {
+                loader.load(args);
+                System.out.println("Попытка скачать файл началась");
+            } catch (MalformedURLException e) {
+                System.out.println(e.getLocalizedMessage());
+            }
         }
     }
 
@@ -48,11 +80,10 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        Loader loader = new Loader();
-        Command command;
-        printHelp(loader);
-        try {
+    public static void main(String[] args) {
+        try (Loader loader = new Loader(getDownloadsPath())) {
+            Command command;
+            printHelp(loader);
             do {
                 command = getCommand();
                 switch (command.command()) {
@@ -64,7 +95,8 @@ public class Main {
                     default -> System.out.println("Некорректная команда");
                 }
             } while (!"/exit".equals(command.command()));
-        } catch (RuntimeException e) {
+            System.out.println("Завершение работы...");
+        } catch (IOException e) {
             System.out.println(e.getLocalizedMessage());
         }
     }
