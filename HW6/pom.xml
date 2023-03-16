@@ -13,10 +13,10 @@
         <maven.compiler.target>19</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions -->
-        <org.json.version>20220320</org.json.version>
-        <org.junit.jupiter.version>5.9.1</org.junit.jupiter.version>
+        <org.json.version>20220924</org.json.version>
+        <org.junit.jupiter.version>5.9.2</org.junit.jupiter.version>
         <com.googlecode.json-simple.version>1.1.1</com.googlecode.json-simple.version>
-        <net.javacrumbs.json-unit.version>2.16.0</net.javacrumbs.json-unit.version>
+        <net.javacrumbs.json-unit.version>2.36.1</net.javacrumbs.json-unit.version>
     </properties>
 
     <dependencies>
