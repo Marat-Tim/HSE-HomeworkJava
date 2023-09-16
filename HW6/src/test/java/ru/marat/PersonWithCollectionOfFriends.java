@@ -1,4 +1,4 @@
-package org.example;
+package ru.marat;
 
 import java.util.Collection;
 
