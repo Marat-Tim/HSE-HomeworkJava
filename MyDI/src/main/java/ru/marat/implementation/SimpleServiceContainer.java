@@ -25,7 +25,7 @@ public class SimpleServiceContainer implements ServiceContainer {
         public <T> T get(Class<T> type) {
             var descriptor = descriptors.get(type);
             if (descriptor.getLifetime() == Lifetime.SESSION || this == rootSession) {
-                return (T) sessionedInstances.putIfAbsent(type, createInstanceAndAddToCloseable(type));
+                return (T) sessionedInstances.computeIfAbsent(type, this::createInstanceAndAddToCloseable);
             }
             if (descriptor.getLifetime() == Lifetime.PROTOTYPE) {
                 return (T) createInstanceAndAddToCloseable(type);
@@ -81,7 +81,7 @@ public class SimpleServiceContainer implements ServiceContainer {
             return session -> instanceBasedServiceDescriptor.getInstance();
         }
         if (descriptor instanceof FactoryBasedServiceDescriptor factoryBasedServiceDescriptor) {
-            return (session) -> factoryBasedServiceDescriptor.getFactoryMethod().apply(session);
+            return session -> factoryBasedServiceDescriptor.getFactoryMethod().apply(session);
         }
         if (descriptor instanceof TypeBasedServiceDescriptor typeBasedServiceDescriptor) {
             var implementationType = typeBasedServiceDescriptor.getImplementation();
@@ -108,6 +108,6 @@ public class SimpleServiceContainer implements ServiceContainer {
     }
 
     private Object createInstance(Class<?> type, Session session) {
-        return builtActivators.putIfAbsent(type, buildActivation(type)).apply(session);
+        return builtActivators.computeIfAbsent(type, this::buildActivation).apply(session);
     }
 }
